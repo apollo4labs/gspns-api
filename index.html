@@ -4,8 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GSPNS / NSmart Public Transport API — Novi Sad (OpenAPI docs)</title>
+  <link rel="icon" type="image/png" href="swagger-ui/index.css">
   <link rel="stylesheet" href="swagger-ui/swagger-ui.css" id="swagger-css-local">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css" onerror="document.getElementById('swagger-css-local').removeAttribute('disabled')">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css"
+        onerror="document.getElementById('swagger-css-local').removeAttribute('disabled')">
   <style>
     html { box-sizing: border-box; overflow-y: scroll; }
     *, *:before, *:after { box-sizing: inherit; }
@@ -17,6 +19,9 @@
     }
     .banner a { color: #7fd0ff; }
     .banner strong { color: #ffd75e; }
+    .loading {
+      padding: 60px 24px; text-align: center; color: #666; font-size: 16px;
+    }
   </style>
 </head>
 <body>
@@ -26,26 +31,15 @@
     Source walkthrough: <a href="https://github.com/FmasterofU/NSmart-RE" target="_blank" rel="noopener">NSmart-RE</a> ·
     API key <code>4670f468049bbee2260</code> is compiled into the public Android APK.
   </div>
-  <div id="swagger-ui"></div>
+  <div id="swagger-ui"><div class="loading">Loading API documentation…</div></div>
 
-  <!-- Try local bundle first; fall back to CDN if it is missing/corrupt -->
-  <script src="swagger-ui/swagger-ui-bundle.js" onerror="loadSwaggerFromCDN()"></script>
-  <script src="swagger-ui/swagger-ui-standalone-preset.js" onerror="loadSwaggerFromCDN()"></script>
   <script>
-    function loadSwaggerFromCDN() {
-      if (window.__swaggerLoaded) return;
-      window.__swaggerLoaded = true;
-      var s = document.createElement("script");
-      s.src = "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js";
-      s.onload = function () {
-        var p = document.createElement("script");
-        p.src = "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-standalone-preset.js";
-        p.onload = initSwagger;
-        document.head.appendChild(p);
-      };
-      document.head.appendChild(s);
-    }
-    function initSwagger() {
+    // Load local assets first (vendored in this repo). If missing (e.g. partial clone),
+    // fall back to the CDN.
+    var localOK = false;
+    var cdnStarted = false;
+    function startSwagger() {
+      if (typeof SwaggerUIBundle === "undefined") return;
       window.ui = SwaggerUIBundle({
         url: "openapi.yaml",
         dom_id: "#swagger-ui",
@@ -53,22 +47,27 @@
         displayOperationId: true,
         defaultModelsExpandDepth: 1,
         defaultModelExpandDepth: 2,
-        presets: [
-          SwaggerUIBundle.presets.apis,
-          SwaggerUIStandalonePreset
-        ],
-        plugins: [
-          SwaggerUIBundle.plugins.DownloadUrl
-        ],
+        presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+        plugins: [SwaggerUIBundle.plugins.DownloadUrl],
         layout: "StandaloneLayout"
       });
     }
-    window.onload = function () {
-      // If local bundles loaded fine, SwaggerUIBundle exists already
-      if (typeof SwaggerUIBundle !== "undefined") {
-        initSwagger();
-      }
-    };
+    function tryCDN() {
+      if (cdnStarted) return;
+      cdnStarted = true;
+      var s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js";
+      s.onload = function () {
+        var p = document.createElement("script");
+        p.src = "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-standalone-preset.js";
+        p.onload = startSwagger;
+        document.head.appendChild(p);
+      };
+      document.head.appendChild(s);
+    }
   </script>
+  <script src="swagger-ui/swagger-ui-bundle.js" onload="localOK=true; startSwagger()" onerror="tryCDN()"></script>
+  <script src="swagger-ui/swagger-ui-standalone-preset.js" onload="startSwagger()" onerror="tryCDN()"></script>
+  <script>window.addEventListener('load', function(){ if (!localOK) tryCDN(); });</script>
 </body>
 </html>
