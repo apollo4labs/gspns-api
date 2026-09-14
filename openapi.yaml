@@ -1,0 +1,710 @@
+openapi: 3.0.3
+info:
+  title: GSPNS / NSmart Public Transport API (Novi Sad)
+  version: "1.0.0"
+  description: |
+    Unofficial documentation of the reverse-engineered API behind the GSPNS (JGSP "Novi Sad")
+    public transport network — the same API used by the **NSmart** mobile app
+    (`buslogic.nsmartapp`).
+
+    The API is served by **BusLogic/NSmart** (`online.nsmart.rs`) and provides:
+
+    * the static transport network (cities → stations → line pairs),
+    * real-time vehicle positions and arrival predictions per station,
+    * electronic ticketing / wallet / card management endpoints (login, e-wallet, top-up…).
+
+    ## Reverse engineering provenance
+
+    * Endpoint paths, class names and the shared API key were recovered from the
+      NSmart 4.6 Android APK (see [FmasterofU/NSmart-RE](https://github.com/FmasterofU/NSmart-RE)).
+    * Response schemas below were verified against the live API in September 2026.
+    * The API key (`4670f468049bbee2260`) is compiled into the public APK as
+      `company_api_key` and is the same for every install — treat it as public knowledge.
+
+    ## Authentication
+
+    Every request must send the header:
+
+    ```
+    X-Api-Authentication: 4670f468049bbee2260
+    ```
+
+    All endpoints in this document include that header in their `security` requirements.
+
+    ## Notes & quirks (learned the hard way)
+
+    * The giant network payload (`networkextended.php`) is **not valid JSON when served
+      over a slow connection** — the server truncates / corrupts the stream mid-body
+      (raw control characters, null-byte runs, dropped chunks). The NSmart app
+      apparently tolerates this; re-request until you get a parseable body.
+    * `networkextended.php` ignores semantically different `action` values
+      (`get_network`, `get_trips`, `get_schedule` return the same cities payload as
+      `get_cities_extended`).
+    * `announcement.php` returns `[{"success":false,"code":3}]` for an unknown
+      `station_uid`.
+    * `ibfm=TM00000` means "all lines"; pass a line code (e.g. `7A`) to filter.
+    * Serbian text is `UTF-8`; strings may come back with JS-style unicode escapes.
+
+  contact:
+    name: Reverse-engineered for a university course
+  license:
+    name: Unofficial — not affiliated with GSPNS/NSmart
+externalDocs:
+  description: NSmart-RE (APK reverse engineering walkthrough)
+  url: https://github.com/FmasterofU/NSmart-RE
+servers:
+  - url: https://online.nsmart.rs
+    description: Production NSmart API used by GSPNS Novi Sad
+security:
+  - ApiKeyAuth: []
+tags:
+  - name: Network
+    description: Static transport network (cities, stations, line pairs)
+  - name: Realtime
+    description: Live arrivals, vehicle positions and per-station predictions
+  - name: Account
+    description: Authentication and user account management
+  - name: Wallet & Cards
+    description: Electronic wallet, monthly cards, NFC cards, credit cards, QR tickets
+  - name: Payments
+    description: AllSecure payment gateway integration
+  - name: Misc
+    description: Version checks, policies, invoices, settings
+paths:
+  /publicapi/v1/networkextended.php:
+    post:
+      tags: [Network]
+      summary: Get the full transport network (cities with stations)
+      description: |
+        Returns every city served by the network, each with its station IDs, "pairs" (line
+        pair IDs per station), default station, coordinates and country.
+
+        **Novi Sad** is city `id: 72` with `452` stations (default station `7`).
+
+        ⚠️ The response body is ~1.2 MB and the server can corrupt/truncate it mid-stream —
+        re-request on parse failure (see info section).
+      operationId: getNetwork
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  enum: [get_cities_extended, get_network, get_trips, get_schedule]
+                  default: get_cities_extended
+                  description: Action verb. Observed values all return the same network payload.
+            examples:
+              default:
+                value:
+                  action: get_cities_extended
+      responses:
+        "200":
+          description: The complete network (cities → stations → pairs)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [cities]
+                properties:
+                  cities:
+                    type: array
+                    description: All cities in the network
+                    items:
+                      $ref: "#/components/schemas/City"
+              example:
+                cities:
+                  - id: 72
+                    name: Novi Sad
+                    gbname: ""
+                    default_station: 7
+                    coordinates:
+                      latitude: 0
+                      longitude: 0
+                    country:
+                      name: Serbia
+                      alpha2_code: RS
+                    classes: ""
+                    stations: [6801, 6548, 6726, 12883]
+                    pairs: [72, 76, 1473, 72]
+                    slugs: novisad
+                    has_train_station: true
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    get:
+      tags: [Network]
+      summary: Get the transport network (GET variant)
+      description: |
+        Same as POST but with the action passed as a query parameter.
+        **Note:** as of September 2026 the server returned `403 Forbidden` for unauthenticated
+        GET requests without the API key; with the key it works. Kept for completeness.
+      operationId: getNetworkGet
+      parameters:
+        - name: action
+          in: query
+          required: true
+          schema:
+            type: string
+            default: get_cities_extended
+      responses:
+        "200":
+          $ref: "#/components/responses/NetworkResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /publicapi/v1/announcement/announcement.php:
+    get:
+      tags: [Realtime]
+      summary: Get live arrivals & vehicle positions for a station
+      description: |
+        Returns real-time departure/arrival predictions for every upcoming vehicle at the
+        given station. Each entry describes one approaching vehicle: seconds left until it
+        reaches the station, its current GPS position, how many stations away it is, the
+        garage (vehicle) number, and the full station sequence of its line.
+
+        Use `ibfm=TM00000` for all lines, or a specific line code (e.g. `7A`) to filter.
+      operationId: getStationAnnouncements
+      parameters:
+        - name: ibfm
+          in: query
+          description: Line filter. `TM00000` = all lines; otherwise a line code such as `7A` or `8`.
+          required: true
+          schema:
+            type: string
+            default: TM00000
+          example: TM00000
+        - name: station_uid
+          in: query
+          description: Station ID (see network endpoint for the full station list). E.g. 6532 = "Narodnog fronta-Šekspirova".
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          example: 6532
+      responses:
+        "200":
+          description: |
+            Array of approaching vehicles with predictions.
+            For an unknown/invalid station_uid the server returns an error array
+            instead: `[{"success":false,"code":3}]`.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Announcement"
+              examples:
+                multiple-lines:
+                  summary: All lines at station 6532
+                  value:
+                    - seconds_left: 1670
+                      line_number: "7A"
+                      stations_gpsx: "45.2401130864"
+                      stations_gpsy: "19.8370251247"
+                      station_name: "Narodnog fronta-Šekspirova"
+                      actual_line_number: "7A"
+                      stations_between: 17
+                      garage_no: "1102"
+                      line_title: "NOVO NASELJE - ŽELEZNIČKA STANICA - FUTOŠKA PIJACA - LIMAN 4 - NOVO NASELJE"
+                      main_line_title: "NOVO NASELJE - ŽELEZNIČKA STANICA - FUTOŠKA PIJACA - LIMAN 4 - NOVO NASELJE"
+                      vehicles:
+                        - garageNo: "1102"
+                          lat: "45.24890660"
+                          lng: "19.79147330"
+                      all_stations:
+                        - id: 13219
+                          coordinates:
+                            latitude: "45.2481177952"
+                            longitude: "19.7860623227"
+                      station_uid: 6532
+                invalid-station:
+                  summary: Unknown station_uid (error envelope)
+                  value:
+                    - success: false
+                      code: 3
+  /publicapi/v1/rest_options/android_login.php:
+    post:
+      tags: [Account]
+      summary: Account actions (login, register, reset password…)
+      description: |
+        Single dispatcher endpoint for account-related actions, selected via the `action`
+        form parameter. Observed behaviours (September 2026):
+
+        * `action=register` → `{"success":false,"msg":"SIGNUP_FORM_NOT_CONFIGURED"}` (registration disabled for this operator)
+        * `action=login` and most other verbs → `[]` (empty array)
+        * missing `action` → plain text `POTREBAN JE PARAMETAR ACTION` ("ACTION parameter is required")
+
+        The full set of actions is not publicly documented; the NSmart APK shows
+        login, register, social login (Google/Facebook), reset password and email
+        verification flows.
+      operationId: accountAction
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  description: Account action verb.
+                  enum: [login, register, reset_password, verify_email]
+                  example: register
+                email:
+                  type: string
+                  format: email
+                  description: Used by login/register/reset flows.
+                password:
+                  type: string
+                  format: password
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+            examples:
+              register:
+                value:
+                  action: register
+                  email: student@example.com
+                  password: "secret"
+                  first_name: Nikola
+                  last_name: Tesla
+      responses:
+        "200":
+          description: Action-dependent result (array or status object)
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    items: {}
+                  - $ref: "#/components/schemas/ApiStatus"
+              examples:
+                login-idle:
+                  summary: Login with no session
+                  value: []
+                register-disabled:
+                  summary: Registration disabled for JGSP Novi Sad
+                  value:
+                    success: false
+                    msg: SIGNUP_FORM_NOT_CONFIGURED
+        "400":
+          description: Missing action parameter (plain text, not JSON)
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: POTREBAN JE PARAMETAR ACTION
+  /publicapi/v1/rest_options/android_additional_options.php:
+    post:
+      tags: [Wallet & Cards]
+      summary: Additional card/ticket options
+      description: |
+        Dispatcher for extra options (prepaid cards, additional settings). Observed to
+        return `[]` for unknown `action` values. Real action verbs are embedded in the
+        NSmart APK (card types, existing NFC/paper cards, online QR codes…).
+      operationId: additionalOptions
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  description: Option action verb.
+            examples:
+              default:
+                value:
+                  action: get_card_types
+      responses:
+        "200":
+          description: Options payload (array of objects)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {}
+              example: []
+  /publicapi/v1/rest_options/android_additional_settings.php:
+    post:
+      tags: [Wallet & Cards]
+      summary: Additional settings
+      description: Dispatcher for additional user/operator settings. Returns `[]` for unknown actions.
+      operationId: additionalSettings
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+            examples:
+              default:
+                value:
+                  action: get_settings
+      responses:
+        "200":
+          description: Settings payload
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {}
+              example: []
+  /publicapi/v1/rest_options/android_allsecure.php:
+    post:
+      tags: [Payments]
+      summary: AllSecure payment operations
+      description: |
+        Payment gateway (AllSecure / Credorax) integration used for card payments,
+        tokenization and validation. Class names in the APK: `AllSecureValidationApi`,
+        `AllSecureFinalizeApi`, `AllSecureCheckStatusApi`.
+      operationId: allsecurePayment
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  description: e.g. validate, finalize, check_status
+            examples:
+              default:
+                value:
+                  action: check_status
+      responses:
+        "200":
+          description: Payment status payload
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                success: true
+  /publicapi/v1/rest_options/android_add_or_connect_card.php:
+    post:
+      tags: [Wallet & Cards]
+      summary: Add or connect a transport card
+      description: Attaches a physical NFC card or prepaid card to the user's account.
+      operationId: addOrConnectCard
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                card_uid:
+                  type: string
+                  description: UID of the physical card being connected.
+            examples:
+              default:
+                value:
+                  action: connect_card
+                  card_uid: "0490A1B2C3"
+      responses:
+        "200":
+          description: Result of the card operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiStatus"
+  /publicapi/v1/rest_options/android_prepaid_cards_log_online.php:
+    post:
+      tags: [Wallet & Cards]
+      summary: Prepaid card online log
+      description: Uploads or fetches the online log of prepaid card usage.
+      operationId: prepaidCardsLog
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+            examples:
+              default:
+                value:
+                  action: get_log
+      responses:
+        "200":
+          description: Prepaid card log entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {}
+              example: []
+  /api/api.php:
+    post:
+      tags: [Misc]
+      summary: Generic internal API dispatcher
+      description: |
+        Legacy/generic dispatcher. Responds with plain text `ERROR_MISSING_PARAMETERS`
+        when the `ACTION` parameter is missing. Behaviour with valid actions is unknown —
+        this endpoint is used by the web front-end.
+      operationId: legacyApi
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                ACTION:
+                  type: string
+                  description: Generic action verb.
+            examples:
+              default:
+                value:
+                  ACTION: get_version
+      responses:
+        "200":
+          description: Legacy API payload
+          content:
+            application/json:
+              schema:
+                type: object
+              example: {}
+        "400":
+          description: Missing ACTION parameter
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: ERROR_MISSING_PARAMETERS
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Authentication
+      description: |
+        Static API key compiled into the public NSmart Android app
+        (resource `company_api_key`). Current value: `4670f468049bbee2260`
+  schemas:
+    City:
+      type: object
+      description: A city (municipality) in the GSPNS network.
+      required: [id, name, default_station, coordinates, country, stations, pairs, slugs, has_train_station]
+      properties:
+        id:
+          type: integer
+          description: City ID. Novi Sad = 72.
+          example: 72
+        name:
+          type: string
+          description: City name (UTF-8, may contain escaped characters).
+          example: Novi Sad
+        gbname:
+          type: string
+          description: Google Business / geocoding name override (often empty).
+          example: ""
+        default_station:
+          type: integer
+          description: Default (central) station ID for the city. Novi Sad = 7.
+          example: 7
+        coordinates:
+          $ref: "#/components/schemas/Coordinates"
+        country:
+          type: object
+          required: [name, alpha2_code]
+          properties:
+            name:
+              type: string
+              example: Serbia
+            alpha2_code:
+              type: string
+              example: RS
+        classes:
+          type: string
+          description: Pipe/format string of fare classes (usually empty in the raw payload).
+          example: ""
+        stations:
+          type: array
+          description: All station IDs belonging to the city.
+          items:
+            type: integer
+          example: [6801, 6548, 6726, 12883]
+        pairs:
+          type: array
+          description: Line-pair IDs per station (used for route reconstruction).
+          items:
+            type: integer
+          example: [72, 76, 1473, 72]
+        slugs:
+          type: string
+          description: URL/geo slug of the city.
+          example: novisad
+        has_train_station:
+          type: boolean
+          description: Whether the city has a railway station.
+          example: false
+    Coordinates:
+      type: object
+      description: Geographic coordinates. Values are numbers (cities) or strings (stations).
+      properties:
+        latitude:
+          oneOf:
+            - type: number
+            - type: string
+          example: 45.2671352
+        longitude:
+          oneOf:
+            - type: number
+            - type: string
+          example: 19.8335496
+    Announcement:
+      type: object
+      description: Real-time prediction for one approaching vehicle at a station.
+      required:
+        - seconds_left
+        - line_number
+        - station_name
+        - actual_line_number
+        - stations_between
+        - garage_no
+        - line_title
+        - main_line_title
+        - vehicles
+        - all_stations
+      properties:
+        seconds_left:
+          type: integer
+          description: Estimated seconds until the vehicle reaches this station.
+          example: 1670
+        line_number:
+          type: string
+          description: Line code of the approaching vehicle.
+          example: "7A"
+        stations_gpsx:
+          type: string
+          description: Station latitude as string.
+          example: "45.2401130864"
+        stations_gpsy:
+          type: string
+          description: Station longitude as string.
+          example: "19.8370251247"
+        station_name:
+          type: string
+          description: Name of the queried station.
+          example: "Narodnog fronta-Šekspirova"
+        actual_line_number:
+          type: string
+          description: Effective line code (same as line_number in practice).
+          example: "7A"
+        stations_between:
+          type: integer
+          description: Number of stations between the vehicle's current position and this station.
+          example: 17
+        garage_no:
+          type: string
+          description: Physical vehicle (garage) number.
+          example: "1102"
+        line_title:
+          type: string
+          description: Full route description of the line.
+          example: "NOVO NASELJE - ŽELEZNIČKA STANICA - FUTOŠKA PIJACA - LIMAN 4 - NOVO NASELJE"
+        main_line_title:
+          type: string
+          description: Main/alternate route description.
+          example: "NOVO NASELJE - ŽELEZNIČKA STANICA - FUTOŠKA PIJACA - LIMAN 4 - NOVO NASELJE"
+        vehicles:
+          type: array
+          description: Live GPS positions of vehicles on this trip (usually one).
+          items:
+            $ref: "#/components/schemas/VehiclePosition"
+        all_stations:
+          type: array
+          description: Complete ordered station sequence of the line with coordinates.
+          items:
+            type: object
+            required: [id, coordinates]
+            properties:
+              id:
+                type: integer
+                example: 13219
+              coordinates:
+                $ref: "#/components/schemas/Coordinates"
+        station_uid:
+          type: integer
+          description: The queried station ID.
+          example: 6532
+    VehiclePosition:
+      type: object
+      description: Live GPS position of a vehicle.
+      required: [garageNo, lat, lng]
+      properties:
+        garageNo:
+          type: string
+          description: Vehicle/garage number.
+          example: "1102"
+        lat:
+          type: string
+          description: Latitude as string.
+          example: "45.24890660"
+        lng:
+          type: string
+          description: Longitude as string.
+          example: "19.79147330"
+    ApiStatus:
+      type: object
+      description: Generic dispatcher status envelope.
+      properties:
+        success:
+          type: boolean
+          example: false
+        msg:
+          type: string
+          example: SIGNUP_FORM_NOT_CONFIGURED
+        code:
+          type: integer
+          description: Numeric error code (e.g. 3 = unknown station).
+          example: 3
+  responses:
+    NetworkResponse:
+      description: The complete network payload
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              cities:
+                type: array
+                items:
+                  $ref: "#/components/schemas/City"
+    AnnouncementError:
+      description: Unknown station or no data
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/ApiStatus"
+          example:
+            - success: false
+              code: 3
+    Forbidden:
+      description: Missing/invalid API key or unauthenticated request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiStatus"

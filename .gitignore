@@ -1,0 +1,11 @@
+# Swagger UI assets (large, CDN available)
+swagger-ui/
+# Generated screenshots
+preview.png
+# Large raw samples (keep small ones)
+samples/cities-final.json
+samples/cities-nonull.json
+samples/cities-try1.json
+samples/cities-try2.json
+samples/sample-cities-extended.json
+!samples/

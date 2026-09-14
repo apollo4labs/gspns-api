@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GSPNS / NSmart Public Transport API — Novi Sad (OpenAPI docs)</title>
+  <link rel="stylesheet" href="swagger-ui/swagger-ui.css" id="swagger-css-local">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css" onerror="document.getElementById('swagger-css-local').removeAttribute('disabled')">
+  <style>
+    html { box-sizing: border-box; overflow-y: scroll; }
+    *, *:before, *:after { box-sizing: inherit; }
+    body { margin: 0; background: #fafafa; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    #swagger-ui { max-width: 1460px; margin: 0 auto; }
+    .banner {
+      background: linear-gradient(135deg, #1a3a5c 0%, #25567f 100%);
+      color: #fff; padding: 14px 24px; font-size: 14px;
+    }
+    .banner a { color: #7fd0ff; }
+    .banner strong { color: #ffd75e; }
+  </style>
+</head>
+<body>
+  <div class="banner">
+    <strong>Unofficial &amp; reverse-engineered</strong> documentation of the GSPNS (JGSP "Novi Sad")
+    public transport API — same backend used by the NSmart app. Not affiliated with GSPNS/NSmart.
+    Source walkthrough: <a href="https://github.com/FmasterofU/NSmart-RE" target="_blank" rel="noopener">NSmart-RE</a> ·
+    API key <code>4670f468049bbee2260</code> is compiled into the public Android APK.
+  </div>
+  <div id="swagger-ui"></div>
+
+  <!-- Try local bundle first; fall back to CDN if it is missing/corrupt -->
+  <script src="swagger-ui/swagger-ui-bundle.js" onerror="loadSwaggerFromCDN()"></script>
+  <script src="swagger-ui/swagger-ui-standalone-preset.js" onerror="loadSwaggerFromCDN()"></script>
+  <script>
+    function loadSwaggerFromCDN() {
+      if (window.__swaggerLoaded) return;
+      window.__swaggerLoaded = true;
+      var s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js";
+      s.onload = function () {
+        var p = document.createElement("script");
+        p.src = "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-standalone-preset.js";
+        p.onload = initSwagger;
+        document.head.appendChild(p);
+      };
+      document.head.appendChild(s);
+    }
+    function initSwagger() {
+      window.ui = SwaggerUIBundle({
+        url: "openapi.yaml",
+        dom_id: "#swagger-ui",
+        deepLinking: true,
+        displayOperationId: true,
+        defaultModelsExpandDepth: 1,
+        defaultModelExpandDepth: 2,
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset
+        ],
+        plugins: [
+          SwaggerUIBundle.plugins.DownloadUrl
+        ],
+        layout: "StandaloneLayout"
+      });
+    }
+    window.onload = function () {
+      // If local bundles loaded fine, SwaggerUIBundle exists already
+      if (typeof SwaggerUIBundle !== "undefined") {
+        initSwagger();
+      }
+    };
+  </script>
+</body>
+</html>
