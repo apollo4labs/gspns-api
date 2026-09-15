@@ -2,7 +2,7 @@ name: Generate Client SDKs
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
     paths:
       - 'openapi.yaml'
       - 'openapi.json'
@@ -43,7 +43,7 @@ jobs:
             -o /local/sdks/go \
             --additional-properties=packageName=jgsp
 
-      # 4. Commit and Push Back to Main
+      # 4. Commit and Push Back to Master
       - name: Commit Generated SDKs
         run: |
           git config --global user.name "github-actions[bot]"

@@ -15,6 +15,31 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # SDKs are generated on the fly so the release always ships them,
+      # even if generate-sdks.yml hasn't committed them to the branch yet.
+      - name: Generate Python SDK
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/local openapitools/openapi-generator-cli generate \
+            -i /local/openapi.yaml \
+            -g python \
+            -o /local/sdks/python \
+            --additional-properties=packageName=jgsp_client
+
+      - name: Generate TypeScript SDK
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/local openapitools/openapi-generator-cli generate \
+            -i /local/openapi.yaml \
+            -g typescript-fetch \
+            -o /local/sdks/typescript
+
+      - name: Generate Go SDK
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/local openapitools/openapi-generator-cli generate \
+            -i /local/openapi.yaml \
+            -g go \
+            -o /local/sdks/go \
+            --additional-properties=packageName=jgsp
+
       - name: Create SDK Archives
         run: |
           tar -czvf python-sdk.tar.gz -C sdks/python .
