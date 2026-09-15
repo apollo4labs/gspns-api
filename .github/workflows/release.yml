@@ -40,11 +40,20 @@ jobs:
             -o /local/sdks/go \
             --additional-properties=packageName=jgsp
 
+      - name: Generate C++ SDK
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/local openapitools/openapi-generator-cli generate \
+            -i /local/openapi.yaml \
+            -g cpp-restsdk \
+            -o /local/sdks/cpp \
+            --additional-properties=packageName=jgsp
+
       - name: Create SDK Archives
         run: |
           tar -czvf python-sdk.tar.gz -C sdks/python .
           tar -czvf typescript-sdk.tar.gz -C sdks/typescript .
           tar -czvf go-sdk.tar.gz -C sdks/go .
+          tar -czvf cpp-sdk.tar.gz -C sdks/cpp .
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -54,6 +63,7 @@ jobs:
             python-sdk.tar.gz
             typescript-sdk.tar.gz
             go-sdk.tar.gz
+            cpp-sdk.tar.gz
           name: Release ${{ github.ref_name }}
           draft: false
           prerelease: false

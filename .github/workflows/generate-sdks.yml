@@ -43,7 +43,16 @@ jobs:
             -o /local/sdks/go \
             --additional-properties=packageName=jgsp
 
-      # 4. Commit and Push Back to Master
+      # 4. Generate C++ Client (cpprestsdk)
+      - name: Generate C++ SDK
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/local openapitools/openapi-generator-cli generate \
+            -i /local/openapi.yaml \
+            -g cpp-restsdk \
+            -o /local/sdks/cpp \
+            --additional-properties=packageName=jgsp
+
+      # 5. Commit and Push Back to Master
       - name: Commit Generated SDKs
         run: |
           git config --global user.name "github-actions[bot]"

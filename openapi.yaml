@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: GSPNS / NSmart Public Transport API (Novi Sad)
-  version: "1.0.0"
+  version: "1.1.0"
   description: |
     Unofficial documentation of the reverse-engineered API behind the GSPNS (JGSP "Novi Sad")
     public transport network — the same API used by the **NSmart** mobile app
