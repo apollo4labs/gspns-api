@@ -1,0 +1,35 @@
+name: Create GitHub Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create SDK Archives
+        run: |
+          tar -czvf python-sdk.tar.gz -C sdks/python .
+          tar -czvf typescript-sdk.tar.gz -C sdks/typescript .
+          tar -czvf go-sdk.tar.gz -C sdks/go .
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            openapi.yaml
+            python-sdk.tar.gz
+            typescript-sdk.tar.gz
+            go-sdk.tar.gz
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
