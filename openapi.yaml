@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: GSPNS / NSmart Public Transport API (Novi Sad)
-  version: "1.1.0"
+  version: "1.2.0"
   description: |
     Unofficial documentation of the reverse-engineered API behind the GSPNS (JGSP "Novi Sad")
     public transport network — the same API used by the **NSmart** mobile app
@@ -41,7 +41,15 @@ info:
       (`get_network`, `get_trips`, `get_schedule` return the same cities payload as
       `get_cities_extended`).
     * `announcement.php` returns `[{"success":false,"code":3}]` for an unknown
-      `station_uid`.
+      `station_uid`. For a *known* station with nothing due it returns a single
+      placeholder entry (`{"just_coordinates":"1", ...}`) instead of an empty array.
+    * A vehicle without a GPS fix is reported at `lat: "0.00000000"`, `lng: "0.00000000"`
+      (often with an empty `garageNo`) — treat `0,0` as "position unknown".
+    * `networkextended.php` also answers a plain `GET` with no parameters, and the payload
+      holds far more than `cities`: the flat `stations` and `lines` lists are what most
+      clients want (see the `Network` schema and `docs/data-notes.md`).
+    * Timetables (scheduled departures) are **not** served by this API — see
+      `docs/timetables.md` for the official gspns.co.rs pages that carry them.
     * `ibfm=TM00000` means "all lines"; pass a line code (e.g. `7A`) to filter.
     * Serbian text is `UTF-8`; strings may come back with JS-style unicode escapes.
 
@@ -107,14 +115,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                required: [cities]
-                properties:
-                  cities:
-                    type: array
-                    description: All cities in the network
-                    items:
-                      $ref: "#/components/schemas/City"
+                $ref: "#/components/schemas/Network"
               example:
                 cities:
                   - id: 72
@@ -165,6 +166,11 @@ paths:
         garage (vehicle) number, and the full station sequence of its line.
 
         Use `ibfm=TM00000` for all lines, or a specific line code (e.g. `7A`) to filter.
+
+        If a known station has nothing due, the array holds a single placeholder object
+        instead of arrivals (see the `no-arrivals` example) — filter for entries that have
+        a numeric `seconds_left`. A vehicle whose GPS position is unknown is reported at
+        `0,0`.
       operationId: getStationAnnouncements
       parameters:
         - name: ibfm
@@ -219,6 +225,14 @@ paths:
                             latitude: "45.2481177952"
                             longitude: "19.7860623227"
                       station_uid: 6532
+                no-arrivals:
+                  summary: Known station, nothing due (placeholder entry)
+                  value:
+                    - gpsx: "45.3141430070"
+                      gpsy: "19.8293094486"
+                      just_coordinates: "1"
+                      station_name: "Agrovojvodina"
+                      station_uid: 6801
                 invalid-station:
                   summary: Unknown station_uid (error envelope)
                   value:
@@ -613,7 +627,13 @@ components:
           example: "7A"
         stations_between:
           type: integer
-          description: Number of stations between the vehicle's current position and this station.
+          description: |
+            Number of stops the vehicle still has to call at *before* this station, so `0` means
+            this station is its very next stop. If this station sits at index `t` in
+            `all_stations`, the vehicle is heading for index `t - stations_between` (it is at or
+            just past the stop before that). On loop lines, where the same station appears
+            twice in `all_stations`, this is what tells the two passes apart: pick the
+            occurrence whose `t - stations_between` entry lies nearest the vehicle.
           example: 17
         garage_no:
           type: string
@@ -634,7 +654,9 @@ components:
             $ref: "#/components/schemas/VehiclePosition"
         all_stations:
           type: array
-          description: Complete ordered station sequence of the line with coordinates.
+          description: |
+            Complete ordered station sequence of the line with coordinates — the whole line,
+            not only the part the vehicle still has to drive.
           items:
             type: object
             required: [id, coordinates]
@@ -648,14 +670,183 @@ components:
           type: integer
           description: The queried station ID.
           example: 6532
+    Network:
+      type: object
+      description: |
+        Payload of `networkextended.php`. Besides `cities`, it carries the flat station and
+        line lists (about 1000 stations and 100 lines for Novi Sad and its suburbs at the
+        time of writing).
+      required: [cities, stations, lines]
+      properties:
+        cities:
+          type: array
+          description: All cities in the network
+          items:
+            $ref: "#/components/schemas/City"
+        stations:
+          type: array
+          description: Every station of every city, with its lines.
+          items:
+            $ref: "#/components/schemas/Station"
+        lines:
+          type: array
+          description: Every line, one entry per direction variant.
+          items:
+            $ref: "#/components/schemas/Line"
+        bike_sharing:
+          type: object
+          description: Bike-sharing pylons; the list is empty for Novi Sad.
+          properties:
+            pylons:
+              type: array
+              items:
+                type: object
+        smart_parking:
+          type: object
+          description: Smart-parking sensors; the list is empty for Novi Sad.
+          properties:
+            parking_sensors:
+              type: array
+              items:
+                type: object
+    Station:
+      type: object
+      description: A station (stop) from the network payload.
+      required: [id, name, coordinates, city_id, city_name, lines_for_station]
+      properties:
+        id:
+          type: integer
+          description: Station ID — the value used as `station_uid` and in `Line.all_stations`.
+          example: 6801
+        name:
+          type: string
+          example: Agrovojvodina
+        station_id:
+          type: string
+          description: Operator's own station code (not the numeric `id`).
+          example: "0125PB"
+        slugs:
+          type: string
+        city_id:
+          type: integer
+          example: 72
+        city_name:
+          type: string
+          example: Novi Sad
+        coordinates:
+          type: object
+          description: Position. Unlike `City.coordinates`, the values are **strings** here.
+          required: [latitude, longitude]
+          properties:
+            latitude:
+              type: string
+              example: "45.3141430070"
+            longitude:
+              type: string
+              example: "19.8293094486"
+        pairs:
+          type: array
+          description: Line-pair IDs serving the station (may contain repeats).
+          items:
+            type: integer
+        importance_order:
+          type: integer
+        train_station:
+          type: boolean
+        lines_for_station:
+          type: array
+          description: Display numbers of the lines that stop here.
+          items:
+            type: string
+          example: ["35", "35ČL", "35L"]
+        lines_for_station_additional_data:
+          type: array
+          items:
+            type: object
+            properties:
+              line_number_for_display:
+                type: string
+                example: "35"
+              vehicle_group:
+                type: string
+                example: "0"
+              line_type:
+                type: string
+                description: Line class — `1`, `2` or `3` (see `Line.line_type`).
+                example: "2"
+              line_type_color_active:
+                type: string
+                example: "#000000"
+              line_type_color_inactive:
+                type: string
+                example: "#000000"
+    Line:
+      type: object
+      description: |
+        A line (one direction variant) from the network payload.
+
+        * `line_number_for_display` is the number riders know ("1", "7A") and is unique per
+          entry. `line_number` / `actual_line_number` are the operator's internal codes and can
+          differ from it (internal `10` is displayed as `1`, internal `41` as `10`, `101` as
+          `10APT`) — use the display number when talking to riders, and match on it against
+          `announcement.php`'s `line_number`.
+        * `all_stations` is every leg of the line **concatenated** (outbound, branch
+          variants and the return trip) — it is not a single one-way path. Return legs mostly
+          use their own stop IDs, so the list does not repeat IDs at the turnaround.
+        * A few stop IDs in `all_stations` are not present in `Network.stations`; skip them.
+        * `line_type_color_active` was `#000000` for every line when checked, so it carries
+          no usable line color.
+      required: [id, line_number, line_number_for_display, line_title, all_stations]
+      properties:
+        id:
+          type: string
+          example: "21432"
+        line_number:
+          type: string
+          description: Internal line code.
+          example: "10"
+        line_number_for_display:
+          type: string
+          description: Rider-facing line number.
+          example: "1"
+        actual_line_number:
+          type: string
+          example: "10"
+        line_title:
+          type: string
+          example: "KLISA - CENTAR - LIMAN 1"
+        line_title_for_display:
+          type: string
+        direction_id_for_display:
+          type: string
+          enum: ["A", "B"]
+        price_variation_id:
+          type: string
+        line_type:
+          type: string
+          description: Line class (`1`, `2` or `3`).
+          example: "1"
+        line_type_color_active:
+          type: string
+          example: "#000000"
+        line_type_color_inactive:
+          type: string
+          example: "#000000"
+        all_stations:
+          type: array
+          description: Station IDs (as strings) in travel order, all legs concatenated.
+          items:
+            type: string
     VehiclePosition:
       type: object
-      description: Live GPS position of a vehicle.
+      description: |
+        Live GPS position of a vehicle. A vehicle with no GPS fix is reported at
+        `lat: "0.00000000"`, `lng: "0.00000000"` — treat that as "unknown".
       required: [garageNo, lat, lng]
       properties:
         garageNo:
           type: string
-          description: Vehicle/garage number.
+          description: Vehicle/garage number (can be an empty string).
           example: "1102"
         lat:
           type: string
@@ -685,12 +876,7 @@ components:
       content:
         application/json:
           schema:
-            type: object
-            properties:
-              cities:
-                type: array
-                items:
-                  $ref: "#/components/schemas/City"
+            $ref: "#/components/schemas/Network"
     AnnouncementError:
       description: Unknown station or no data
       content:

@@ -44,6 +44,8 @@ reverse-engineered it:
 | [`openapi.yaml`](openapi.yaml) | ⭐ The OpenAPI 3.0.3 specification (the main deliverable) |
 | [`index.html`](index.html) | Swagger UI page — browse & try the API in a browser |
 | [`TUTORIAL.md`](TUTORIAL.md) | 📚 Step-by-step usage tutorial with code examples |
+| [`docs/data-notes.md`](docs/data-notes.md) | Payload details for building a real client: line numbers, stop lists, placeholders |
+| [`docs/timetables.md`](docs/timetables.md) | Scheduled departures — the official gspns.co.rs pages (not part of this API) |
 | [`examples/`](examples) | Ready-to-run scripts (Python, Node.js) |
 | [`samples/`](samples) | Raw responses captured from the live API |
 | [`index.html`](index.html) | Swagger UI page (loads assets from CDN with local fallback) |
@@ -183,6 +185,14 @@ More examples (Python, Node.js, JavaScript fetch) in the [tutorial](TUTORIAL.md)
    error (`POTREBAN JE PARAMETAR ACTION`), not JSON.
 6. **Registration is disabled** for JGSP Novi Sad: `action=register` →
    `{"success":false,"msg":"SIGNUP_FORM_NOT_CONFIGURED"}`.
+7. **"Nothing due" is a placeholder, not `[]`.** A known station with no approaching bus
+   returns `[{"just_coordinates":"1", ...}]`; keep only entries with a numeric `seconds_left`.
+8. **GPS `0,0` means unknown.** Vehicles without a fix are reported at latitude/longitude
+   `"0.00000000"`.
+9. **`networkextended.php` has more than `cities`** — flat `stations` and `lines` lists, where
+   a line's `all_stations` is every leg concatenated. See [`docs/data-notes.md`](docs/data-notes.md).
+10. **No timetables here.** Scheduled departures live on gspns.co.rs — see
+    [`docs/timetables.md`](docs/timetables.md).
 
 ---
 
