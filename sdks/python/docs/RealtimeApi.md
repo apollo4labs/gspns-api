@@ -19,6 +19,11 @@ garage (vehicle) number, and the full station sequence of its line.
 
 Use `ibfm=TM00000` for all lines, or a specific line code (e.g. `7A`) to filter.
 
+If a known station has nothing due, the array holds a single placeholder object
+instead of arrivals (see the `no-arrivals` example) — filter for entries that have
+a numeric `seconds_left`. A vehicle whose GPS position is unknown is reported at
+`0,0`.
+
 
 ### Example
 

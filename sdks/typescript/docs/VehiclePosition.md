@@ -1,7 +1,7 @@
 
 # VehiclePosition
 
-Live GPS position of a vehicle.
+Live GPS position of a vehicle. A vehicle with no GPS fix is reported at `lat: \"0.00000000\"`, `lng: \"0.00000000\"` — treat that as \"unknown\". 
 
 ## Properties
 

@@ -9,7 +9,7 @@ Method | HTTP request | Description
 
 
 # **get_network**
-> GetNetwork200Response get_network(get_network_request)
+> Network get_network(get_network_request)
 
 Get the full transport network (cities with stations)
 
@@ -28,8 +28,8 @@ re-request on parse failure (see info section).
 
 ```python
 import jgsp_client
-from jgsp_client.models.get_network200_response import GetNetwork200Response
 from jgsp_client.models.get_network_request import GetNetworkRequest
+from jgsp_client.models.network import Network
 from jgsp_client.rest import ApiException
 from pprint import pprint
 
@@ -76,7 +76,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**GetNetwork200Response**](GetNetwork200Response.md)
+[**Network**](Network.md)
 
 ### Authorization
 
@@ -97,7 +97,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **get_network_get**
-> GetNetworkGet200Response get_network_get(action)
+> Network get_network_get(action)
 
 Get the transport network (GET variant)
 
@@ -112,7 +112,7 @@ GET requests without the API key; with the key it works. Kept for completeness.
 
 ```python
 import jgsp_client
-from jgsp_client.models.get_network_get200_response import GetNetworkGet200Response
+from jgsp_client.models.network import Network
 from jgsp_client.rest import ApiException
 from pprint import pprint
 
@@ -159,7 +159,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**GetNetworkGet200Response**](GetNetworkGet200Response.md)
+[**Network**](Network.md)
 
 ### Authorization
 

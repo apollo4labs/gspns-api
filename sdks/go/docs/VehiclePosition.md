@@ -4,7 +4,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**GarageNo** | **string** | Vehicle/garage number. | 
+**GarageNo** | **string** | Vehicle/garage number (can be an empty string). | 
 **Lat** | **string** | Latitude as string. | 
 **Lng** | **string** | Longitude as string. | 
 

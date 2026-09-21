@@ -12,12 +12,12 @@ Name | Type | Description | Notes
 **stations_gpsy** | **str** | Station longitude as string. | [optional] 
 **station_name** | **str** | Name of the queried station. | 
 **actual_line_number** | **str** | Effective line code (same as line_number in practice). | 
-**stations_between** | **int** | Number of stations between the vehicle&#39;s current position and this station. | 
+**stations_between** | **int** | Number of stops the vehicle still has to call at *before* this station, so &#x60;0&#x60; means this station is its very next stop. If this station sits at index &#x60;t&#x60; in &#x60;all_stations&#x60;, the vehicle is heading for index &#x60;t - stations_between&#x60; (it is at or just past the stop before that). On loop lines, where the same station appears twice in &#x60;all_stations&#x60;, this is what tells the two passes apart: pick the occurrence whose &#x60;t - stations_between&#x60; entry lies nearest the vehicle.  | 
 **garage_no** | **str** | Physical vehicle (garage) number. | 
 **line_title** | **str** | Full route description of the line. | 
 **main_line_title** | **str** | Main/alternate route description. | 
 **vehicles** | [**List[VehiclePosition]**](VehiclePosition.md) | Live GPS positions of vehicles on this trip (usually one). | 
-**all_stations** | [**List[AnnouncementAllStationsInner]**](AnnouncementAllStationsInner.md) | Complete ordered station sequence of the line with coordinates. | 
+**all_stations** | [**List[AnnouncementAllStationsInner]**](AnnouncementAllStationsInner.md) | Complete ordered station sequence of the line with coordinates — the whole line, not only the part the vehicle still has to drive.  | 
 **station_uid** | **int** | The queried station ID. | [optional] 
 
 ## Example

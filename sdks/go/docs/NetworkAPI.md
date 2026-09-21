@@ -11,7 +11,7 @@ Method | HTTP request | Description
 
 ## GetNetwork
 
-> GetNetwork200Response GetNetwork(ctx).GetNetworkRequest(getNetworkRequest).Execute()
+> Network GetNetwork(ctx).GetNetworkRequest(getNetworkRequest).Execute()
 
 Get the full transport network (cities with stations)
 
@@ -39,7 +39,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error when calling `NetworkAPI.GetNetwork``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
 	}
-	// response from `GetNetwork`: GetNetwork200Response
+	// response from `GetNetwork`: Network
 	fmt.Fprintf(os.Stdout, "Response from `NetworkAPI.GetNetwork`: %v\n", resp)
 }
 ```
@@ -59,7 +59,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**GetNetwork200Response**](GetNetwork200Response.md)
+[**Network**](Network.md)
 
 ### Authorization
 
@@ -77,7 +77,7 @@ Name | Type | Description  | Notes
 
 ## GetNetworkGet
 
-> GetNetworkGet200Response GetNetworkGet(ctx).Action(action).Execute()
+> Network GetNetworkGet(ctx).Action(action).Execute()
 
 Get the transport network (GET variant)
 
@@ -105,7 +105,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error when calling `NetworkAPI.GetNetworkGet``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
 	}
-	// response from `GetNetworkGet`: GetNetworkGet200Response
+	// response from `GetNetworkGet`: Network
 	fmt.Fprintf(os.Stdout, "Response from `NetworkAPI.GetNetworkGet`: %v\n", resp)
 }
 ```
@@ -125,7 +125,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**GetNetworkGet200Response**](GetNetworkGet200Response.md)
+[**Network**](Network.md)
 
 ### Authorization
 

@@ -1,5 +1,4 @@
 .gitignore
-.openapi-generator-ignore
 CMakeLists.txt
 Config.cmake.in
 README.md
@@ -29,9 +28,14 @@ include/jgsp/model/City_country.h
 include/jgsp/model/Coordinates.h
 include/jgsp/model/Coordinates_latitude.h
 include/jgsp/model/Coordinates_longitude.h
-include/jgsp/model/GetNetworkGet_200_response.h
-include/jgsp/model/GetNetwork_200_response.h
 include/jgsp/model/GetNetwork_request.h
+include/jgsp/model/Line.h
+include/jgsp/model/Network.h
+include/jgsp/model/Network_bike_sharing.h
+include/jgsp/model/Network_smart_parking.h
+include/jgsp/model/Station.h
+include/jgsp/model/Station_coordinates.h
+include/jgsp/model/Station_lines_for_station_additional_data_inner.h
 include/jgsp/model/VehiclePosition.h
 src/AnyType.cpp
 src/ApiClient.cpp
@@ -57,7 +61,12 @@ src/model/City_country.cpp
 src/model/Coordinates.cpp
 src/model/Coordinates_latitude.cpp
 src/model/Coordinates_longitude.cpp
-src/model/GetNetworkGet_200_response.cpp
-src/model/GetNetwork_200_response.cpp
 src/model/GetNetwork_request.cpp
+src/model/Line.cpp
+src/model/Network.cpp
+src/model/Network_bike_sharing.cpp
+src/model/Network_smart_parking.cpp
+src/model/Station.cpp
+src/model/Station_coordinates.cpp
+src/model/Station_lines_for_station_additional_data_inner.cpp
 src/model/VehiclePosition.cpp

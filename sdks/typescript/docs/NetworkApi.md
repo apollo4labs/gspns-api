@@ -11,7 +11,7 @@ All URIs are relative to *https://online.nsmart.rs*
 
 ## getNetwork
 
-> GetNetwork200Response getNetwork(getNetworkRequest)
+> Network getNetwork(getNetworkRequest)
 
 Get the full transport network (cities with stations)
 
@@ -60,7 +60,7 @@ example().catch(console.error);
 
 ### Return type
 
-[**GetNetwork200Response**](GetNetwork200Response.md)
+[**Network**](Network.md)
 
 ### Authorization
 
@@ -83,7 +83,7 @@ example().catch(console.error);
 
 ## getNetworkGet
 
-> GetNetworkGet200Response getNetworkGet(action)
+> Network getNetworkGet(action)
 
 Get the transport network (GET variant)
 
@@ -132,7 +132,7 @@ example().catch(console.error);
 
 ### Return type
 
-[**GetNetworkGet200Response**](GetNetworkGet200Response.md)
+[**Network**](Network.md)
 
 ### Authorization
 

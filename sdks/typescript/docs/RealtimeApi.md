@@ -14,7 +14,7 @@ All URIs are relative to *https://online.nsmart.rs*
 
 Get live arrivals &amp; vehicle positions for a station
 
-Returns real-time departure/arrival predictions for every upcoming vehicle at the given station. Each entry describes one approaching vehicle: seconds left until it reaches the station, its current GPS position, how many stations away it is, the garage (vehicle) number, and the full station sequence of its line.  Use &#x60;ibfm&#x3D;TM00000&#x60; for all lines, or a specific line code (e.g. &#x60;7A&#x60;) to filter. 
+Returns real-time departure/arrival predictions for every upcoming vehicle at the given station. Each entry describes one approaching vehicle: seconds left until it reaches the station, its current GPS position, how many stations away it is, the garage (vehicle) number, and the full station sequence of its line.  Use &#x60;ibfm&#x3D;TM00000&#x60; for all lines, or a specific line code (e.g. &#x60;7A&#x60;) to filter.  If a known station has nothing due, the array holds a single placeholder object instead of arrivals (see the &#x60;no-arrivals&#x60; example) — filter for entries that have a numeric &#x60;seconds_left&#x60;. A vehicle whose GPS position is unknown is reported at &#x60;0,0&#x60;. 
 
 ### Example
 

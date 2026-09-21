@@ -1,12 +1,12 @@
 # VehiclePosition
 
-Live GPS position of a vehicle.
+Live GPS position of a vehicle. A vehicle with no GPS fix is reported at `lat: \"0.00000000\"`, `lng: \"0.00000000\"` — treat that as \"unknown\". 
 
 ## Properties
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**garage_no** | **str** | Vehicle/garage number. | 
+**garage_no** | **str** | Vehicle/garage number (can be an empty string). | 
 **lat** | **str** | Latitude as string. | 
 **lng** | **str** | Longitude as string. | 
 
